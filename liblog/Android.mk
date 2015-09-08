@@ -57,7 +57,10 @@ endif
 # ========================================================
 LOCAL_MODULE := liblog
 LOCAL_SRC_FILES := $(liblog_host_sources)
-LOCAL_CFLAGS := -DFAKE_LOG_DEVICE=1 -Os -std=gnu89
+LOCAL_CFLAGS := -DFAKE_LOG_DEVICE=1
+LOCAL_CFLAGS += -Os
+LOCAL_CONLYFLAGS += -std=gnu89
+LOCAL_CPPFLAGS += -std=gnu++03
 LOCAL_MULTILIB := both
 include $(BUILD_HOST_STATIC_LIBRARY)
 
@@ -76,13 +79,17 @@ include $(BUILD_HOST_SHARED_LIBRARY)
 include $(CLEAR_VARS)
 LOCAL_MODULE := liblog
 LOCAL_SRC_FILES := $(liblog_target_sources)
-LOCAL_CFLAGS := -Os -std=gnu89
+LOCAL_CFLAGS += -Os
+LOCAL_CONLYFLAGS += -std=gnu89
+LOCAL_CPPFLAGS += -std=gnu++03
 include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := liblog
 LOCAL_WHOLE_STATIC_LIBRARIES := liblog
-LOCAL_CFLAGS := -Os -std=gnu89
+LOCAL_CFLAGS += -Os
+LOCAL_CONLYFLAGS += -std=gnu89
+LOCAL_CPPFLAGS += -std=gnu++03
 include $(BUILD_SHARED_LIBRARY)
 
 include $(call first-makefiles-under,$(LOCAL_PATH))
