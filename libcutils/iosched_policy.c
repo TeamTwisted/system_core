@@ -61,29 +61,55 @@ int android_get_ioprio(int pid __android_unused, IoSchedClass *clazz, int *iopri
 }
 
 #ifdef HAVE_ANDROID_OS
-static int __bfqio_prio_supported = -1;
+static int __bfqio_cgroup_supported = -1;
 static int rt_cgroup_fd = -1;
+static int ui_cgroup_fd = -1;
 static int hipri_cgroup_fd = -1;
 static int fg_cgroup_fd = -1;
 static int bg_cgroup_fd = -1;
 static int idle_cgroup_fd = -1;
 static pthread_once_t the_once = PTHREAD_ONCE_INIT;
 
-static void __initialize_bfq(void) {
+static void __initialize_bfqio(void) {
     if (!access("/sys/fs/cgroup/bfqio/tasks", F_OK)) {
-
-        fg_cgroup_fd = open("/sys/fs/cgroup/bfqio/tasks", O_WRONLY | O_CLOEXEC);
-        bg_cgroup_fd = open("/sys/fs/cgroup/bfqio/bg/tasks", O_WRONLY | O_CLOEXEC);
-        rt_cgroup_fd = open("/sys/fs/cgroup/bfqio/rt/tasks", O_WRONLY | O_CLOEXEC);
-        hipri_cgroup_fd = open("/sys/fs/cgroup/bfqio/hipri/tasks", O_WRONLY | O_CLOEXEC);
-        idle_cgroup_fd = open("/sys/fs/cgroup/bfqio/idle/tasks", O_WRONLY | O_CLOEXEC);
-
-        if (fg_cgroup_fd > -1 && bg_cgroup_fd > -1) {
-            __bfqio_prio_supported = 1;
-            return;
-        }
+        __bfqio_cgroup_supported = 1;
+    } else {
+        __bfqio_cgroup_supported = 0;
     }
-    __bfqio_prio_supported = 0;
+}
+
+static int __get_bfqio_fd(int prio) {
+
+    if (__bfqio_cgroup_supported != 1) {
+        return -1;
+    }
+
+    if (prio <= -18) {
+        if (rt_cgroup_fd < 0) {
+            rt_cgroup_fd = open("/sys/fs/cgroup/bfqio/rt/tasks", O_WRONLY | O_CLOEXEC);
+        }
+        return rt_cgroup_fd;
+    } else if (prio <= -8) {
+        if (ui_cgroup_fd < 0) {
+            ui_cgroup_fd = open("/sys/fs/cgroup/bfqio/ui/tasks", O_WRONLY | O_CLOEXEC);
+        }
+        return ui_cgroup_fd;
+    } else if (prio >= 18) {
+        if (idle_cgroup_fd < 0) {
+            idle_cgroup_fd = open("/sys/fs/cgroup/bfqio/idle/tasks", O_WRONLY | O_CLOEXEC);
+        }
+        return idle_cgroup_fd;
+    } else if (prio >= 10) {
+        if (bg_cgroup_fd < 0) {
+            bg_cgroup_fd = open("/sys/fs/cgroup/bfqio/bg/tasks", O_WRONLY | O_CLOEXEC);
+        }
+        return bg_cgroup_fd;
+    }
+
+    if (fg_cgroup_fd < 0) {
+        fg_cgroup_fd = open("/sys/fs/cgroup/bfqio/tasks", O_WRONLY | O_CLOEXEC);
+    }
+    return fg_cgroup_fd;
 }
 
 int android_set_bfqio_prio(int tid __android_unused, int prio __android_unused)
@@ -91,21 +117,18 @@ int android_set_bfqio_prio(int tid __android_unused, int prio __android_unused)
     struct stat st;
     int fd;
 
-    pthread_once(&the_once, __initialize_bfq);
+    pthread_once(&the_once, __initialize_bfqio);
 
-    if (__bfqio_prio_supported == 0)
+    if (__bfqio_cgroup_supported == 0)
         return -1;
 
-    if (prio < -17)
-        fd = rt_cgroup_fd;
-    else if (prio < -2)
-        fd = hipri_cgroup_fd;
-    else if (prio >= 18)
-        fd = idle_cgroup_fd;
-    else if (prio >= 10)
-        fd = bg_cgroup_fd;
-    else
-        fd = fg_cgroup_fd;
+    if (prio < -19 || prio > 20) {
+        return -1;
+    }
+
+    fd = __get_bfqio_fd(prio);
+    if (fd < 0)
+        return -1;
 
 #ifdef HAVE_GETTID
     if (tid == 0) {
@@ -113,7 +136,7 @@ int android_set_bfqio_prio(int tid __android_unused, int prio __android_unused)
     }
 #endif
 
-    if (fd < 0)
+    if (tid < 200)
         return -1;
 
     // specialized itoa -- works for tid > 0
