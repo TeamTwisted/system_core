@@ -62,8 +62,9 @@ int android_get_ioprio(int pid __android_unused, IoSchedClass *clazz, int *iopri
 
 #ifdef HAVE_ANDROID_OS
 static int __bfqio_cgroup_supported = -1;
-static int rt_cgroup_fd = -1;
-static int ui_cgroup_fd = -1;
+static int rt_audio_cgroup_fd = -1;
+static int rt_display_cgroup_fd = -1;
+static int display_cgroup_fd = -1;
 static int hipri_cgroup_fd = -1;
 static int fg_cgroup_fd = -1;
 static int bg_cgroup_fd = -1;
@@ -84,16 +85,16 @@ static int __get_bfqio_fd(int prio) {
         return -1;
     }
 
-    if (prio <= -18) {
-        if (rt_cgroup_fd < 0) {
-            rt_cgroup_fd = open("/sys/fs/cgroup/bfqio/rt/tasks", O_WRONLY | O_CLOEXEC);
+    if (prio < -17) {
+        if (rt_audio_cgroup_fd < 0) {
+            rt_audio_cgroup_fd = open("/sys/fs/cgroup/bfqio/rt-audio/tasks", O_WRONLY | O_CLOEXEC);
         }
-        return rt_cgroup_fd;
-    } else if (prio <= -8) {
-        if (ui_cgroup_fd < 0) {
-            ui_cgroup_fd = open("/sys/fs/cgroup/bfqio/ui/tasks", O_WRONLY | O_CLOEXEC);
+        return rt_audio_cgroup_fd;
+    } else if (prio < -8) {
+        if (rt_display_cgroup_fd < 0) {
+            rt_display_cgroup_fd = open("/sys/fs/cgroup/bfqio/rt-display/tasks", O_WRONLY | O_CLOEXEC);
         }
-        return ui_cgroup_fd;
+        return rt_display_cgroup_fd;
     } else if (prio >= 18) {
         if (idle_cgroup_fd < 0) {
             idle_cgroup_fd = open("/sys/fs/cgroup/bfqio/idle/tasks", O_WRONLY | O_CLOEXEC);
@@ -106,10 +107,10 @@ static int __get_bfqio_fd(int prio) {
         return bg_cgroup_fd;
     }
 
-    if (fg_cgroup_fd < 0) {
-        fg_cgroup_fd = open("/sys/fs/cgroup/bfqio/tasks", O_WRONLY | O_CLOEXEC);
-    }
-    return fg_cgroup_fd;
+//    if (fg_cgroup_fd < 0) {
+//        fg_cgroup_fd = open("/sys/fs/cgroup/bfqio/tasks", O_WRONLY | O_CLOEXEC);
+//    }
+    return -1;
 }
 
 int android_set_bfqio_prio(int tid __android_unused, int prio __android_unused)
