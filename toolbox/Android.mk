@@ -69,6 +69,7 @@ LOCAL_SRC_FILES := \
 LOCAL_CFLAGS += $(common_cflags)
 
 LOCAL_SHARED_LIBRARIES := \
+    liblog \
     libcutils \
     libselinux \
 
