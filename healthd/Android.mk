@@ -17,6 +17,7 @@ LOCAL_SRC_FILES := \
 	BatteryMonitor.cpp \
 	BatteryPropertiesRegistrar.cpp
 
+LOCAL_CLANG := true
 LOCAL_MODULE := healthd
 LOCAL_MODULE_TAGS := optional
 LOCAL_FORCE_STATIC_EXECUTABLE := true
